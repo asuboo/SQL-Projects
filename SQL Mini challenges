@@ -33,4 +33,6 @@ where exists (
               and c.customer_name = 'Shashank'
               );
 
-'WHERE' in the sub query acts like a 'ON' operation in join
+Explanation:
+For each records in the customer table, we do a lookup in the orders table based on the where conditions to see if any records exists.
+'WHERE' in the sub query also acts like a 'ON' operation in join
