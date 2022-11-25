@@ -1,0 +1,20 @@
+1. Customer Placing the Largest Number Orders
+
+Hint : Use the sub-query as a table, then pick the columns you need as output
+select customer_number 
+from 
+    (select customer_number, count(order_number)Tot_orders
+     from orders
+     group by customer_number
+     order by Tot_orders desc
+     limit 1)d
+
+2. To get he second highest salary
+
+Hint: First remove the max salary from the dataset using filter condition, then get the max salary from the remaining dataset
+select max(salary) 
+from l1
+where salary not in (
+			              select max(salary) 	
+                    from l1
+                    )
