@@ -15,6 +15,22 @@ Hint: First remove the max salary from the dataset using filter condition, then 
 select max(salary) 
 from l1
 where salary not in (
-			              select max(salary) 	
+		    select max(salary) 	
                     from l1
                     )
+		    
+3. To check if a customer named 'Shashank' has placed any orders or not; just a lookup
+
+Hint - You dont have to use join when all you need is a lookup operation. 
+	Hence use 'EXISTS' which works like a boolean that is if your subquery returns true, 
+	only then the main query will return the records
+
+select *
+from customers c
+where exists (
+	      select order_id from orders o
+              where o.customer_id = c.customer_id
+              and c.customer_name = 'Shashank'
+              );
+
+'WHERE' in the sub query acts like a 'ON' operation in join
