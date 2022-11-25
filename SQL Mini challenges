@@ -1,4 +1,4 @@
-1. Customer Placing the Largest Number Orders
+1. Customer Placing the Largest Number Orders --> From codingninjas.com
 
 Hint : Use the sub-query as a table, then pick the columns you need as output
 select customer_number 
@@ -9,7 +9,7 @@ from
      order by Tot_orders desc
      limit 1)d
 
-2. To get he second highest salary
+2. To get he second highest salary --> From codingninjas.com
 
 Hint: First remove the max salary from the dataset using filter condition, then get the max salary from the remaining dataset
 select max(salary) 
