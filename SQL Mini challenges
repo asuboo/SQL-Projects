@@ -8,7 +8,7 @@ from
      group by customer_number
      order by Tot_orders desc
      limit 1)d
-
+==================================================================================================================================
 2. To get he second highest salary --> From codingninjas.com
 
 Hint: First remove the max salary from the dataset using filter condition, then get the max salary from the remaining dataset
@@ -18,7 +18,8 @@ where salary not in (
 		    select max(salary) 	
                     from l1
                     )
-		    
+
+===============================================================================================================================
 3. To check if a customer named 'Shashank' has placed any orders or not; just a lookup
 
 Hint - You dont have to use join when all you need is a lookup operation. 
@@ -36,3 +37,48 @@ where exists (
 Explanation:
 For each records in the customer table, we do a lookup in the orders table based on the where conditions to see if any records exists.
 'WHERE' in the sub query also acts like a 'ON' operation in join
+
+================================================================================================================================
+4. To capture only the unique combination of records
+
+# Dataset creation
+
+create table src_dest_distance
+(
+    source          varchar(20),
+    destination     varchar(20),
+    distance        int
+);
+insert into src_dest_distance values ('Bangalore', 'Hyderbad', 400);
+insert into src_dest_distance values ('Hyderbad', 'Bangalore', 400);
+insert into src_dest_distance values ('Mumbai', 'Delhi', 400);
+insert into src_dest_distance values ('Delhi', 'Mumbai', 400);
+insert into src_dest_distance values ('Chennai', 'Pune', 400);
+insert into src_dest_distance values ('Pune', 'Chennai', 400);
+
+Solution:
+
+with c1 as (
+		select *,
+			row_number() over () ID   -- added a row number for each row and given an alias as ID
+		from src_dest_distance sdd
+)
+select c1.*
+from c1
+join c1 c2  -- doing a self join
+on c1.source = c2.destination -- 1st condition for joining
+and c1.ID < c2.ID  -- another condition added using AND or WHERE operator to compare the IDs of the two tables and joining executes only
+			-- when the ID of the c1 table is less than the ID of the c2 table. This will make sure that 
+			-- every record of c1 table will match only with one record of c2 table- where the ID is less)
+			-- for example ID 1 of c1 table will try to match only with IDs(2,3,4,5,6) of c2 table and not ID 1
+			-- and of those, based on first condition, only record 2 of c2 will match
+
+learnings:
+2 condition join (with one non equi join)
+row_number() over()
+
+=========================================================================================================================
+
+
+
+
