@@ -1,0 +1,93 @@
+# Table creation and data insertion:
+
+drop table if exists sales_data;
+
+create table sales_data
+    (
+        sales_date      date,
+        customer_id     varchar(30),
+        amount          varchar(30)
+    );
+    
+insert into sales_data values (str_to_date('01-Jan-2021','%d-%b-%Y'),'Cust-1', '50$');
+insert into sales_data values (str_to_date('02-Jan-2021','%d-%b-%Y'), 'Cust-1', '50$');
+insert into sales_data values (str_to_date('03-Jan-2021','%d-%b-%Y'), 'Cust-1', '50$');
+insert into sales_data values (str_to_date('01-Jan-2021','%d-%b-%Y'),'Cust-2', '100$');
+insert into sales_data values (str_to_date('02-Jan-2021','%d-%b-%Y'), 'Cust-2', '100$');
+insert into sales_data values (str_to_date('03-Jan-2021', '%d-%b-%Y'),'Cust-2', '100$');
+insert into sales_data values (str_to_date('01-Feb-2021', '%d-%b-%Y'),'Cust-2', '-100$');
+insert into sales_data values (str_to_date('02-Feb-2021','%d-%b-%Y'), 'Cust-2', '-100$');
+insert into sales_data values (str_to_date('03-Feb-2021', '%d-%b-%Y'),'Cust-2', '-100$');
+insert into sales_data values (str_to_date('01-Mar-2021', '%d-%b-%Y'),'Cust-3', '1$');
+insert into sales_data values (str_to_date('01-Apr-2021','%d-%b-%Y'), 'Cust-3', '1$');
+insert into sales_data values (str_to_date('01-May-2021', '%d-%b-%Y'),'Cust-3', '1$');
+insert into sales_data values (str_to_date('01-Jun-2021','%d-%b-%Y'), 'Cust-3', '1$');
+insert into sales_data values (str_to_date('01-Jul-2021', '%d-%b-%Y'),'Cust-3', '-1$');
+insert into sales_data values (str_to_date('01-Aug-2021','%d-%b-%Y'), 'Cust-3', '-1$');
+insert into sales_data values (str_to_date('01-Sep-2021','%d-%b-%Y'),'Cust-3', '-1$');
+insert into sales_data values (str_to_date('01-Oct-2021','%d-%b-%Y'),'Cust-3', '-1$');
+insert into sales_data values (str_to_date('01-Nov-2021','%d-%b-%Y'), 'Cust-3', '-1$');
+insert into sales_data values (str_to_date('01-Dec-2021', '%d-%b-%Y'),'Cust-3', '-1$');
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+-- base query written to get the data in the required format
+with base_query as (
+					select customer_id as Customer,
+						   date_format(sales_date,'%b-%y') sales_date,  -- %b for month in MMM format & %y for year in YY format
+						   replace(amount,'$','') amount  -- to remove the $ suffix for calculatin purpose
+					from sales_data
+					),
+-- case statement used to create columns for each month and in that process the rows got converted to columns
+final_data as (
+				select Customer,
+						sum(case when sales_date = 'Jan-21' then amount else 0 end) as Jan_21,
+						sum(case when sales_date = 'Feb-21' then amount else 0 end) as Feb_21,
+						sum(case when sales_date = 'Mar-21' then amount else 0 end) as Mar_21,
+						sum(case when sales_date = 'Apr-21' then amount else 0 end) as Apr_21,
+						sum(case when sales_date = 'May-21' then amount else 0 end) as May_21,
+						sum(case when sales_date = 'Jun-21' then amount else 0 end) as Jun_21,
+						sum(case when sales_date = 'Jul-21' then amount else 0 end) as Jul_21,
+						sum(case when sales_date = 'Aug-21' then amount else 0 end) as Aug_21,
+						sum(case when sales_date = 'Sep-21' then amount else 0 end) as Sep_21,
+						sum(case when sales_date = 'Oct-21' then amount else 0 end) as Oct_21,
+						sum(case when sales_date = 'Nov-21' then amount else 0 end) as Nov_21,
+						sum(case when sales_date = 'Dec-21' then amount else 0 end) as Dec_21,
+						sum(amount) as Total -- to add the last column
+				from base_query
+				group by Customer
+				UNION -- to add the last row 'Total', used 'UNION' operator which must have the same number of columns as the above query
+				select 'Total' as Customer, -- hard coded the 'Total' name here
+						sum(case when sales_date = 'Jan-21' then amount else 0 end) as Jan_21,
+						sum(case when sales_date = 'Feb-21' then amount else 0 end) as Feb_21,
+						sum(case when sales_date = 'Mar-21' then amount else 0 end) as Mar_21,
+						sum(case when sales_date = 'Apr-21' then amount else 0 end) as Apr_21,
+						sum(case when sales_date = 'May-21' then amount else 0 end) as May_21,
+						sum(case when sales_date = 'Jun-21' then amount else 0 end) as Jun_21,
+						sum(case when sales_date = 'Jul-21' then amount else 0 end) as Jul_21,
+						sum(case when sales_date = 'Aug-21' then amount else 0 end) as Aug_21,
+						sum(case when sales_date = 'Sep-21' then amount else 0 end) as Sep_21,
+						sum(case when sales_date = 'Oct-21' then amount else 0 end) as Oct_21,
+						sum(case when sales_date = 'Nov-21' then amount else 0 end) as Nov_21,
+						sum(case when sales_date = 'Dec-21' then amount else 0 end) as Dec_21,
+						'' as Total -- to have a blank cell in the last column
+				from base_query
+                )
+	-- Final transformaion of data done in the below main query wherein the negative sign is replaced with braces and all the values are suffixed with $ sign
+	select customer,
+			case when Jan_21< 0 then concat('(',Jan_21*-1,')$') else concat(Jan_21, '$') end as 'Jan-21',
+            case when Feb_21< 0 then concat('(',Feb_21*-1,')$') else concat(Feb_21, '$') end as 'Feb-21',
+            case when Mar_21< 0 then concat('(',Mar_21*-1,')$') else concat(Mar_21, '$') end as 'Mar-21',
+            case when Apr_21< 0 then concat('(',Apr_21*-1,')$') else concat(Apr_21, '$') end as 'Apr-21',
+            case when May_21< 0 then concat('(',May_21*-1,')$') else concat(May_21, '$') end as 'May-21',
+            case when Jun_21< 0 then concat('(',Jun_21*-1,')$') else concat(Jun_21, '$') end as 'Jun-21',
+            case when Jul_21< 0 then concat('(',Jul_21*-1,')$') else concat(Jul_21, '$') end as 'Jul-21',
+            case when Aug_21< 0 then concat('(',Aug_21*-1,')$') else concat(Aug_21, '$') end as 'Aug-21',
+            case when Sep_21< 0 then concat('(',Sep_21*-1,')$') else concat(Sep_21, '$') end as 'Sep-21',
+            case when Oct_21< 0 then concat('(',Oct_21*-1,')$') else concat(Oct_21, '$') end as 'Oct-21',
+            case when Nov_21< 0 then concat('(',Nov_21*-1,')$') else concat(Nov_21, '$') end as 'Nov-21',
+            case when total = '' then '' else -- to leave it blank if blank for the very last cell
+					(case when Total < 0 then concat('(',Total*-1,')$') else concat(Total, '$') end) end as 'Total' -- for the last column 'Total'
+	from final_data;
+                
