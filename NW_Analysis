@@ -1,0 +1,58 @@
+use northwind;
+
+# 1. Calculate average Unit Price for each CustomerId.
+
+select * from order_details; -- ID,orderID,ProductID,UnitPrice,Quantity,Discount
+select * from orders; -- OrderID, CustomerID, EmployeeID, Freight, Shipvia etc.,
+
+-- with group by clause for all to get the summary
+select o.CustomerID, o.orderID,od.ProductID,od.UnitPrice,od.quantity,
+		-- avg(od.UnitPrice)over(partition by od.UnitPrice order by od.UnitPrice desc)Avg_UnitPrice -- this ll give the average price same as unitprice itself
+        avg(od.UnitPrice)over(partition by o.CustomerID)Avg_UnitPrice -- here avg unit price is sum of unit prices divided by count of productIDs
+from orders o
+join order_details od
+on o.orderID = od.orderID
+group by o.CustomerID, o.orderID,od.ProductID,od.UnitPrice,od.quantity
+order by o.CustomerID, od.UnitPrice;
+
+-- Using windows function without group by on CustomerID
+select o.CustomerID, 
+		avg(od.UnitPrice)over(partition by o.CustomerID)Avg_UnitPrice
+from orders o
+join order_details od
+on o.orderID = od.orderID
+-- group by o.CustomerID  -- group by instead of giving avg unit price it seems to be picking up some random unit price for each customer
+order by o.CustomerID;
+
+-- Final soln:
+select distinct o.CustomerID,
+		round(avg(od.UnitPrice)over(partition by o.CustomerID ),2)Avg_UnitPrice
+from orders o
+join order_details od
+on o.orderID = od.orderID
+-- group by o.CustomerID  -- removed group by and included distinct keyword in the select statement to get the correct average price
+order by o.CustomerID;
+
+############################################################################################################################################
+
+# 2. Calculate average Unit Price for each group of CustomerId AND EmployeeId.
+-- doing the below way is wrong
+select o.CustomerID, o.EmployeeID, od.ProductID,
+		od.UnitPrice, od.quantity, 
+		avg(od.UnitPrice)over(partition by o.CustomerID )Avg_UnitPrice_Cust,
+        avg(od.UnitPrice)over(partition by o.EmployeeID )Avg_UnitPrice_Emp
+from orders o
+join order_details od
+on o.orderID = od.orderID
+order by o.CustomerID;
+
+-- Final Soln
+select o.CustomerID, o.EmployeeID, od.UnitPrice,
+        avg(od.UnitPrice)over(partition by o.CustomerID, o.EmployeeID)Avg_UnitPrice_Cust_Emp_Grp
+from orders o
+join order_details od
+on o.orderID = od.orderID
+order by o.CustomerID;
+
+#############################################################################################################################################
+
