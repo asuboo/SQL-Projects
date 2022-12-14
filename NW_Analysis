@@ -16,7 +16,7 @@ group by o.CustomerID, o.orderID,od.ProductID,od.UnitPrice,od.quantity
 order by o.CustomerID, od.UnitPrice;
 
 -- Using windows function without group by on CustomerID
-select o.CustomerID, 
+select o.CustomerID, od.UnitPrice,
 		avg(od.UnitPrice)over(partition by o.CustomerID)Avg_UnitPrice
 from orders o
 join order_details od
@@ -36,15 +36,15 @@ order by o.CustomerID;
 ############################################################################################################################################
 
 # 2. Calculate average Unit Price for each group of CustomerId AND EmployeeId.
--- doing the below way is wrong
+-- doing the below way is wrong as the partition is happening seperately for customerID and EmployeeID
 select o.CustomerID, o.EmployeeID, od.ProductID,
 		od.UnitPrice, od.quantity, 
-		avg(od.UnitPrice)over(partition by o.CustomerID )Avg_UnitPrice_Cust,
-        avg(od.UnitPrice)over(partition by o.EmployeeID )Avg_UnitPrice_Emp
+		avg(od.UnitPrice)over(partition by o.CustomerID )Avg_UnitPrice_Cust, -- this provides partition only on customerID column and gives the avg unit price
+        avg(od.UnitPrice)over(partition by o.EmployeeID )Avg_UnitPrice_Emp -- this provides partition only on employeeID column and gives the avg unit price
 from orders o
 join order_details od
-on o.orderID = od.orderID
-order by o.CustomerID;
+on o.orderID = od.orderID;
+
 
 -- Final Soln
 select o.CustomerID, o.EmployeeID, od.UnitPrice,
@@ -56,7 +56,151 @@ order by o.CustomerID;
 
 #############################################################################################################################################
 
-Explain RDS and AWS key management services.
+# 3. Rank Unit Price in descending order for each CustomerId.
+
+-- Ranking without partition
+select o.CustomerID,
+		od.UnitPrice, 
+        rank()over(order by od.UnitPrice desc)UnitPrice_Rank
+from orders o
+join order_details od
+on o.orderID = od.orderID;
+
+-- ranking based on customerID partition
+select o.CustomerID,
+		od.UnitPrice, 
+        rank()over(partition by o.CustomerID order by od.UnitPrice desc)UnitPrice_Rank
+from orders o
+join order_details od
+on o.orderID = od.orderID;
+
+#############################################################################################################################################
+
+# 4. How can you pull the previous order date’s Quantity for each ProductId.
+
+-- Need OrderID, Order date, ProductID & Qty
+select * from order_details; -- ID,orderID,ProductID,UnitPrice,Quantity,Discount
+select * from orders; -- OrderID, CustomerID, EmployeeID, Freight, Shipvia etc.,
+
+select od.ProductID,
+		o.OrderDate,
+        od.quantity,
+        lag(od.quantity,1)over(partition by od.ProductID order by o.OrderDate)Previous_Qty_Ordered
+from orders o
+join order_details od
+on o.orderID = od.orderID;
+
+##########################################################################################################################################
+# 5. How can you pull the following order date’s Quantity for each ProductId.
+
+select od.ProductID,
+		o.OrderDate,
+        od.quantity,
+        lead(od.quantity,1)over(partition by od.ProductID order by o.OrderDate)Next_Qty_Ordered
+from orders o
+join order_details od
+on o.orderID = od.orderID;
+
+###########################################################################################################################################
+
+# 6. Pull out the very first Quantity ever ordered for each ProductId.
+
+select od.ProductID,
+		od.quantity,
+        o.OrderDate,
+        first_value(od.quantity)over(partition by od.ProductID order by o.OrderDate)First_Qty_Ordered
+from orders o
+join order_details od
+on o.orderID = od.orderID;
+
+##############################################################################################################################
+
+# 7. Calculate a cumulative moving average UnitPrice for each CustomerId.
+
+-- need Unitprice & customerID
+
+select o.CustomerID,
+		od.UnitPrice, 
+        avg(od.UnitPrice)over(partition by o.CustomerID order by od.UnitPrice
+        range between unbounded preceding and current row)Cumm_MA_UnitPrice
+from orders o
+join order_details od
+on o.orderID = od.orderID;
+
+#############################################################################################################################################
+
+# Theoretical questions:
+
+# 1. Can you define a trigger that is invoked automatically before a new row is inserted into a table?
+
+drop table if exists d1;
+drop trigger if exists nrow;
+create table d1(ID int auto_increment primary key, amt bigint);
+
+delimiter $$
+create trigger nrow
+before insert
+on d1 for each row
+Begin	
+	if(New.amt < 500) then
+		signal sqlstate '50001' set message_text = 'Warning ! Amount must be greater than 500';
+	end if;
+End $$
+delimiter ;
+
+insert into d1 values(5,600);
+select * from d1;
+ 
+ #############################################################################################################################################
+# 2. What are the different types of triggers?
+
+/*
+There are 6 different types of trigger in MySQL
+
+1. Before Update Trigger: Invoked before an update is implemented into a table
+2. After Update Trigger: Invoked after an update occurs into a table
+3. Before Insert Trigger: Invoked before an Insert statement is executed
+4. After Insert Trigger: Invoked after an Insert statement is executed
+5. Before Delete Trigger: Invoked before a delete statement is executed
+6. After Delete Trigger: Invoked after a delete statement is executed
+*/
+############################################################################################################################################
+
+# 3. How is Metadata expressed and structured?
+
+select *
+from information_schema.columns
+where table_schema = 'northwind';
+
+select *
+from information_schema.tables
+where table_schema = 'northwind';
+
+select *
+from information_schema.views
+where table_schema = 'northwind';
+
+show tables;
+desc categories;
+explain categories; -- same as describe
+show character set; -- Displays the available character sets along with their default collations
+SHOW VARIABLES LIKE 'character_set_system';
+
+/*
+1. All metadata must be in the same character set. Otherwise, neither the SHOW statements nor SELECT statements for tables in 
+INFORMATION_SCHEMA would work properly because different rows in the same column of the results of these operations would be
+in different character sets.
+2. Metadata must include all characters in all languages. Otherwise, users would not be able to name columns and
+tables using their own languages.
+
+To satisfy both requirements, MySQL stores metadata in a Unicode character set, namely UTF-8. 
+This does not cause any disruption if you never use accented or non-Latin characters. But if you do, you should be aware 
+that metadata is in UTF-8.
+
+Ref: https://dev.mysql.com/doc/refman/8.0/en/charset-metadata.html#:~:text=To%20satisfy%20both%20requirements%2C%20MySQL,metadata%20is%20in%20UTF%2D8.
+*/
+######################################################################################################################################################
+# 4. Explain RDS and AWS key management services.
  /* 
  Amazon RDS:
  Amazon Relational Database Service (RDS)is a managed Relational Database Service that provides the following benefits:
@@ -67,6 +211,7 @@ Explain RDS and AWS key management services.
 	- Compute scaling up to a maximum of 32 vCPUs and 244 GiB of RAM
     - Storage scaling up to a maximum of 64 TB or a maximum you define with zero downtime
     - Using Read Replicas, you can scale out beyond the capacity of a single database deployment for read-heavy database workloads.
+
  5. Being cost effective meaning there are no upfront investments required and you pay only for the resources you use.
  Besides, it also provides patching, backup, recovery, failure detection, and repair.
  
@@ -81,3 +226,25 @@ Explain RDS and AWS key management services.
  will always have access to your keys.
 
  */
+ 
+ #############################################################################################################################################################
+ 
+ # 5. What is the difference between amazon EC2 and RDS?
+ 
+ /*
+               Amazon EC2					|				Amazon RDS
+ 1. Provides full control over your DB		|	1. AWS takes full responsibility of your DB
+ 2. Need DB admin to manage your DB			|	2. Easy set-up 
+ 3. Need for you to set up a high 			|	3. High Availability Relational DB
+ availability DB							|
+ 4. Need for you to setup a scalable		| 	4. Easy to scale out through RDS read replicas 
+ architecture manually						|
+ 5. Need for you to take care of the backup	|	5. RDS offers automated backups
+ 6. Any DB can be configured				|	6. Supports 6 DBs - Aurora, SQL Server, MySQL, MariaDB, PostgreSQL and Oracle.
+ 7. Offeres flexibility in meeting your		|	7. Fast, predictable and consistent Input/Output performance
+ performance requirements
+ 
+ */
+ ################################THE END#########################################################################################################
+ 
+ 
