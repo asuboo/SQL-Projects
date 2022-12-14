@@ -56,3 +56,28 @@ order by o.CustomerID;
 
 #############################################################################################################################################
 
+Explain RDS and AWS key management services.
+ /* 
+ Amazon RDS:
+ Amazon Relational Database Service (RDS)is a managed Relational Database Service that provides the following benefits:
+ 1. Application compatibility with 6 DB engines - Amazon Aurora, MySQL, MariaDB, PostgreSQL, Oracle, and Microsoft SQL Server. 
+ 2. No Infrastructure Management.
+ 3. Instant Provisioning meaning the user will have instant access to data to work on.
+ 4. Scaling up/down flexibility to handle higher or lower load and scalable storage space:
+	- Compute scaling up to a maximum of 32 vCPUs and 244 GiB of RAM
+    - Storage scaling up to a maximum of 64 TB or a maximum you define with zero downtime
+    - Using Read Replicas, you can scale out beyond the capacity of a single database deployment for read-heavy database workloads.
+ 5. Being cost effective meaning there are no upfront investments required and you pay only for the resources you use.
+ Besides, it also provides patching, backup, recovery, failure detection, and repair.
+ 
+ AWS Key Management Services(KMS):
+ AWS KMS allows you to create and manage cryptographic keys that protects data across your AWS workloads. Accesses governed by the 
+ Key policies which lets you precisely control when, how and who can read your data and using asymmetric key pairs
+ you can create and verify digital signatures to ensure the integrity of your data. 
+ Since AWS KMS is integrated with AWS CloudTrail you are able to record all the API requests including Key management actions, 
+ Key lifecycle events and usage. This helps you manage risk & meet compliance requirements.AWS KMS is integrated with
+ over a 100 AWS services.
+ Since AWS KMS is fully managed, AWS KMS automatically scales to meet your needs and is designed to ensure your critical workloads
+ will always have access to your keys.
+
+ */
