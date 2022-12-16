@@ -12,17 +12,8 @@ select o.CustomerID, o.orderID,od.ProductID,od.UnitPrice,od.quantity,
 from orders o
 join order_details od
 on o.orderID = od.orderID
-group by o.CustomerID, o.orderID,od.ProductID,od.UnitPrice,od.quantity
+-- group by o.CustomerID, o.orderID,od.ProductID,od.UnitPrice,od.quantity -- group by doesn't make any difference here
 order by o.CustomerID, od.UnitPrice;
-
--- Using windows function without group by on CustomerID
-select o.CustomerID, od.UnitPrice,
-		avg(od.UnitPrice)over(partition by o.CustomerID)Avg_UnitPrice
-from orders o
-join order_details od
-on o.orderID = od.orderID
--- group by o.CustomerID  -- group by instead of giving avg unit price it seems to be picking up some random unit price for each customer
-order by o.CustomerID;
 
 -- Final soln:
 select distinct o.CustomerID,
@@ -30,7 +21,8 @@ select distinct o.CustomerID,
 from orders o
 join order_details od
 on o.orderID = od.orderID
--- group by o.CustomerID  -- removed group by and included distinct keyword in the select statement to get the correct average price
+-- group by o.CustomerID -- group by instead of giving avg unit price it seems to be picking up some random unit price for each customer
+  -- removed group by and included distinct keyword in the select statement to get the correct average price
 order by o.CustomerID;
 
 ############################################################################################################################################
@@ -123,6 +115,7 @@ select o.CustomerID,
 		od.UnitPrice, 
         avg(od.UnitPrice)over(partition by o.CustomerID order by od.UnitPrice
         range between unbounded preceding and current row)Cumm_MA_UnitPrice
+        -- range between unbounded preceding and unbounded following)Cumm_MA_UnitPrice -- this ll give avg unit price partitioned by customer ID
 from orders o
 join order_details od
 on o.orderID = od.orderID;
@@ -183,7 +176,7 @@ where table_schema = 'northwind';
 show tables;
 desc categories;
 explain categories; -- same as describe
-show character set; -- Displays the available character sets along with their default collations
+show character set; -- Displays the available character sets along with their default collations. A character set is a set of symbols and encodings. A collation is a set of rules for comparing characters in a character set.
 SHOW VARIABLES LIKE 'character_set_system';
 
 /*
@@ -211,7 +204,6 @@ Ref: https://dev.mysql.com/doc/refman/8.0/en/charset-metadata.html#:~:text=To%20
 	- Compute scaling up to a maximum of 32 vCPUs and 244 GiB of RAM
     - Storage scaling up to a maximum of 64 TB or a maximum you define with zero downtime
     - Using Read Replicas, you can scale out beyond the capacity of a single database deployment for read-heavy database workloads.
-
  5. Being cost effective meaning there are no upfront investments required and you pay only for the resources you use.
  Besides, it also provides patching, backup, recovery, failure detection, and repair.
  
