@@ -199,6 +199,98 @@ final_data as (
                 
 ================================================================================================================
 
+7. File extension modification
+
+
+-- creating and inserting data into the table
+
+create table files
+(
+id              int primary key,
+date_modified   date,
+file_name       varchar(50)
+);
+
+insert into files values (1	,   '2021-06-03', 'thresholds.svg');
+insert into files values (2	,   '2021-06-01', 'redrag.py');
+insert into files values (3	,   '2021-06-03', 'counter.pdf');
+insert into files values (4	,   '2021-06-06', 'reinfusion.py');
+insert into files values (5	,   '2021-06-06', 'tonoplast.docx');
+insert into files values (6	,   '2021-06-01','uranian.pptx');
+insert into files values (7	,   '2021-06-03', 'discuss.pdf');
+insert into files values (8	,   '2021-06-06', 'nontheologically.pdf');
+insert into files values (9	,   '2021-06-01', 'skiagrams.py');
+insert into files values (10,   '2021-06-04', 'flavors.py');
+insert into files values (11,   '2021-06-05', 'nonv.pptx');
+insert into files values (12,   '2021-06-01', 'under.pptx');
+insert into files values (13,   '2021-06-02', 'demit.csv');
+insert into files values (14,   '2021-06-02', 'trailings.pptx');
+insert into files values (15,   '2021-06-04','asst.py');
+insert into files values (16,   '2021-06-03','pseudo.pdf');
+insert into files values (17,   '2021-06-03','unguarded.jpeg');
+insert into files values (18,   '2021-06-06', 'suzy.docx');
+insert into files values (19,   '2021-06-06', 'anitsplentic.py');
+insert into files values (20,   '2021-06-03', 'tallies.py');
+
+Solution for MySQL:
+
+1st approach( not advisablae):
+
+with c1 as
+(select date_modified, file_name, substr(file_name,instr(file_name,".")+1)Extension
+from files
+order by 1,3
+),
+c2 as (
+select date_modified, Extension,count(Extension)Total
+from c1
+group by date_modified, Extension
+order by 1
+),
+c3 as (
+select c2.*, max(Total) over(partition by date_modified)Max_modifications
+from c2
+),
+c4 as(
+select c3.date_modified,c3.Extension, c3.Total 
+from c3 
+join c3 c31
+where c3.date_modified = c31.date_modified and
+c3.Total = c31.Max_modifications
+group by c3.date_modified,c3.Extension
+)
+select date_modified, group_concat(Extension order by Extension desc) Extension, Total 
+from c4
+group by 1;
+
+
+
+-- another better approach
+
+with c1 as (
+select date_modified,substr(file_name,instr(file_name,".")+1)Extension, count(substr(file_name,instr(file_name,".")+1))Total
+from files
+group by date_modified,Extension
+order by 1,2
+)
+select date_modified, group_concat(Extension order by Extension desc) Extension, Total 
+from c1
+where Total = (
+				select max(Total)
+                from c1 c10 -- giving alias here and doing a kind of self join
+                -- group by date_modified  -- Doing a group by here will return more than 1 row, hence group by cannot be used
+                where c1.date_modified = c10.date_modified -- This will act as a group by clause for date_modified..i.e it provides max total for each unique date_modified
+                )
+group by date_modified;
+
+Learning:
+substr --> To get the part of a string
+instr --> to get the position of anything
+where condiion in the above correlated subquery acted as a group by clause and fetched the max count of each date_modified column
+
+               
+============================================================================================================================
+
 
 
 
