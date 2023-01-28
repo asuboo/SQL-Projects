@@ -1,0 +1,93 @@
+/* Analysing MovieDB */
+
+-- 1. Find the actors who were cast in the movie 'Annie Hall'. Return actor first name, last name & Role
+USE moviedb;
+
+select * from actors;   -- act_id, act_fname, act_lname, act_gender
+select * from movie_cast;  -- act_id, mov_id, role
+select * from movie; -- mov_id,mov_title,mov_year,mov_time,mov_lang,mov_dt-rel,mov_rel_country
+
+-- just to check if the movie title is available
+select mov_id from movie
+where mov_title = 'Annie Hall';
+-- o/p = 911
+
+select a.act_fname First_name, a.act_lname Last_Name, mc.role 
+from actors a inner join movie_cast mc
+on a.act_id = mc.act_id
+inner join movie m
+on mc.mov_id = m.mov_id
+where m.mov_title = 'Annie Hall';
+
+-- 2. To find the director who directed a movie that casted a role for 'Eyes wide shut'. Return director's first name, last name & movie title
+
+select * from movie; -- mov_id,mov_title,mov_year,mov_time,mov_lang,mov_dt_rel,mov_rel_country
+select * from movie_direction; -- dir_id, mov_id
+select * from director; -- dir_id,dir_fname, dir_lname
+
+select * from movie
+where mov_title = 'Eyes Wide Shut';
+-- o/p mov_id = 907
+
+select d.dir_fname, d.dir_lname, mov_title
+from movie m inner join movie_direction md
+on m.mov_id = md.mov_id
+inner join director d
+on md.dir_id = d.dir_id
+where m.mov_title = 'Eyes Wide Shut';
+
+-- 3. To find who directed a movie that casted a role as 'Sean Maguire'. Return director first name, last name and movie title
+select * from movie_cast;  -- act_id, mov_id, role
+select * from movie; -- mov_id,mov_title,mov_year,mov_time,mov_lang,mov_dt_rel,mov_rel_country
+select * from movie_direction; -- dir_id, mov_id
+select * from director; -- dir_id,dir_fname, dir_lname
+
+
+select mov_id from movie_cast
+where role = 'Sean Maguire';
+-- o/p = 916
+
+select d.dir_fname,d.dir_lname,m.mov_title
+from movie_cast mc natural join movie m natural join movie_direction md natural join director d
+where role = 'Sean Maguire';
+
+-- 4. To find the actors who have not acted in any movie between 1990 and 2000(Begin & end values included).
+-- Return actor first name,last name,movie title & release year
+
+select * from movie;  -- mov_id,mov_title,mov_year,mov_time,mov_lang,mov_dt_rel,mov_rel_country
+select * from movie_cast;  -- act_id, mov_id, role
+select * from actors;   -- act_id, act_fname, act_lname, act_gender
+
+-- to get the list of actor ids acted between 1990 & 2000 to put in sub query
+
+select act_id
+from movie m natural join movie_cast mc natural join actors a
+where mov_year between 1990 and 2000;
+
+select a.act_fname,a.act_lname,m.mov_title,year(mov_dt_rel) Release_Year
+from movie m natural join movie_cast mc natural join actors a
+where act_id not in (select act_id
+from movie m natural join movie_cast mc natural join actors a
+where mov_year between 1990 and 2000)
+order by Release_Year;
+
+-- another way of writing it
+
+select a.act_fname,a.act_lname,m.mov_title,year(mov_dt_rel) Release_Year
+from movie m natural join movie_cast mc natural join actors a
+where mov_year not between 1990 and 2000 
+order by Release_Year;
+
+-- 4. To find the directors with the number of genres of movies. Group the result set on director's first name, last name and generic title.
+-- Sort the result set in ascending order by director first name & last name.
+-- Return Director's first name, last name and number of genres of movies
+
+select * from director; -- dir_id,dir_fname, dir_lname
+select * from movie_direction; -- dir_id, mov_id
+select * from movie_genres; -- mov_id,gen_id
+select * from genres; -- gen_id,gen_title
+
+select dir_fname,dir_lname,count(g.gen_id) "No of genres"
+from director d natural join movie_direction md natural join movie_genres mg natural join genres g
+group by dir_fname,dir_lname,gen_title
+order by dir_fname,dir_lname;
