@@ -1,0 +1,206 @@
+# Data analysis on igclone DB - a social networking database
+
+
+use ig_clone;
+# 2. We want to reward the user who has been around the longest, Find the 5 oldest users.
+select *, datediff(current_date(),created_at) Duration_days
+from users
+order by Duration_days desc
+limit 5;
+/* The top 5 oldest users are user id 80, 67,63,95 & 71 */
+
+# 3. To understand when to run the ad campaign, figure out the day of the week most users register on? 
+-- select extract(day from created_at)Day_Of_the_Week,count(id)User_Count
+select dayname(created_at)Day_Of_the_Week,count(id)User_Count
+from users
+group by Day_Of_the_Week
+order by User_Count desc;
+/* Inference:
+Both on Thursdays and Sundays most number of users got registered on. Business can take a call
+on when to run the ad campaign on any one of these two days.
+*/
+
+# 4. To target inactive users in an email ad campaign, find the users who have never posted a photo.
+select u.*,p.id Photos_id
+from users u
+left join photos p on u.id = p.user_id
+group by u.id
+having p.id is null; -- filtering out the user ids in which the photos id is null
+
+-- extracting only the user id & username
+select d.id,d.username from (
+select u.*,p.id photos_id
+from users u
+left join photos p on u.id = p.user_id
+group by u.id
+having p.id is null)d; -- filtering out the user ids in which the photos id is null
+/* Inference:
+There are 26 inactive users who have never posted a photo and they can 
+be targeted for the email ad campaign
+*/
+
+#5. Suppose you are running a contest to find out who got the most likes on a photo. Find out who won?
+with photo_likes as 
+	(select photo_id, count(user_id)Likes_Count
+	from likes
+	group by photo_id
+	order by Likes_Count desc
+	), -- to get the photo id and the count of likes from likes table
+user_photo as
+	(select id as photos_id, user_id
+	from photos) -- to get the user id and the posted photos id from the photos table
+select up.user_id,u.username, pl.photo_id,pl.Likes_Count
+from photo_likes pl
+join user_photo up  -- joined the above two cte tables to get the photos_id posted by an user_id and the likes received;
+on pl.photo_id = up.photos_id
+join users u    --  joined user table to get the username
+on u.id = up.user_id
+group by up.user_id,pl.photo_id
+order by Likes_Count desc 
+limit 1;
+/* Inference:
+WINNER is user_id 52 - Zack_Kemmer93 who got
+48 likes for the photo_id 145 */
+
+#6. The investors want to know how many times does the average user post.
+select distinct created_at from photos;
+select distinct created_at from comments;
+-- the records are fetched on 6th Nov'22 @ 4:48:13 PM
+
+-- to get the user_id & the number of comment posts they made
+select user_id,count(id)Tot_Comment_Posts
+from comments
+group by user_id
+order by Tot_Comment_Posts desc;
+
+-- to get the user_id & the number of photo posts they made
+select user_id,count(id)Tot_Photo_Posts
+from photos
+group by user_id
+order by Tot_Photo_Posts desc;
+
+-- Average comment posts posted 
+select round(count(id)/count(distinct user_id)) Avg_Comment_Posts_per_second
+from comments;
+
+-- Average Photos posts posted 
+select round(count(id)/count(distinct user_id)) Avg_Photo_Posts_per_second
+from photos;
+/* Inference:
+An user posts an average of 97 comments per second
+Also an user posts an average of 3 photos per second
+*/
+
+#7.A brand wants to know which hashtag to use on a post, and find the top 5 most used hashtags.
+
+select * from tags; -- id,tag_name
+select * from photo_tags; -- photo_id, tag_id
+select * from comments; -- id, comment_text, photo_id, user_id
+select * from likes;  -- user_id, photo_id
+-- to get the top 5 hashtags
+select (select tag_name from tags t where t.id = pt.tag_id)HashTag, 
+		count(pt.photo_id)Tot_Photos
+from photo_tags pt
+group by HashTag
+order by Tot_Photos desc
+limit 5;
+/* Inference:
+The brand can use the #Smile on its post as it is the most used hashtag.
+#Smile, #Beach, #Party, #Fun, #Concert are the top 5 most used hashtags
+*/
+
+-- Another approach to find which hashtag to use on a post based on the maximum number of likes & comments received
+ -- created a view that captures the photo_id, the number of likes & the number of comments
+create view LikeComment as
+-- to get the most comments
+with com as (
+select photo_id, count(id)Tot_Comments
+from comments
+group by photo_id
+order by Tot_Comments desc
+),
+-- Photo_id 13, 157 & 247 has the most comments received
+-- to get the photo_id & the number of likes
+lik as (select photo_id, count(user_id)Tot_Likes
+from likes
+group by 1
+order by Tot_Likes desc
+)
+-- photo_id 145 received the most number of likes
+select p.id Photo_Id, com.Tot_Comments, lik.Tot_Likes
+from photos p 
+join com on com.photo_id = p.id
+join lik on lik.photo_id = p.id;
+
+-- to get the hastags used for the most liked & the most commented photos
+select lc.Photo_Id, t.tag_name
+from photo_tags pt
+join LikeComment lc on lc.Photo_id = pt.photo_id
+join tags t on t.id = pt.tag_id
+where lc.Photo_Id = (select photo_id from LikeComment -- a view
+					 order by Tot_Likes desc
+					limit 1) or
+	
+      lc.Photo_Id = (select photo_id from LikeComment -- a view
+					 order by Tot_Comments desc
+					limit 1);               
+/* Inference:
+The most commented photo_id 13 uses the hashtags #fun & #drunk; and the 
+most liked photo_id 145 uses the hastags #Party, #Concert, #drunk & #smile
+Hence the brand can choose the appropriate one for the post from the above list.
+*/
+
+#8.To find out if there are bots, find users who have liked every single photo on the site.
+select user_id, 
+	   (select u.username from users u where u.id = likes.user_id) UserName,
+		count(photo_id)Tot_Photos_Liked
+from likes
+group by user_id, UserName
+having Tot_Photos_Liked = (select count(p.id) from photos p );
+/* Inference:
+There seems to be 13 users or could be bots which have liked all the 
+257 photos.
+*/
+
+#9. To know who the celebrities are, find users who have never commented on a photo.
+select u.id User_ID,u.username,c.id Comment_ID
+from users u
+left join comments c on c.user_id = u.id
+where c.id is null
+order by u.id;
+/* Inference:
+There are 23 users who have never commented on any photo
+and they could be celebrities
+*/
+
+#10. Now it's time to find both of them together, find the users who have never commented on any photo or have commented on every photo.
+select u.id User_ID, u.username UserName, 'Never commented on any photo' Remarks
+from users u
+left join comments c on c.user_id = u.id
+where c.id is null -- user not in the comments table out of all the users from the user table
+-- 23 users with no comments posted for any photo
+UNION ALL
+-- users who have commented on every photo 
+select c.user_id User_ID, 
+	   (select u.username from users u where u.id = c.user_id) UserName,
+		'Comment posted for all the photos' Comments
+from comments c
+group by user_id, UserName
+having count(distinct c.photo_id) = (select count(p.id) from photos p ) -- count of photo_ids in the comments table compared with total photos for any user
+order by 1;
+-- 13 users with comments posted for all the photos
+/* Soln:
+23 users who have never commented on any photo + 13 users with comments posted for all the photos that together 
+make 36 users in total in the result set
+*/
+
+select u.id, f.followee_id
+from users u
+left join follows f on f.followee_id = u.id
+where f.followee_id is null;
+
+select count(distinct followee_id)
+from follows;
+
+select count(id)
+from users
